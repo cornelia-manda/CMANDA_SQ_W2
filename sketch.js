@@ -1,132 +1,100 @@
 // ============================================================
-// Week 2 Example 2: Platformer with Platforms Array
+// Platformer: Custom Textures & Elevator Mechanic
 // ============================================================
+
+let bgImage;
+let playerSprite;
+let platformTexture;
 
 // ------------------------------------------------------------
 // PLATFORMS ARRAY
-// Each platform is an object with x, y, width, and height.
-// x and y are the TOP-LEFT corner (same as rect()).
-//
-// Storing platforms in an array means:
-//   - We can loop through all of them with one for loop
-//   - Adding a new platform = adding one line of data
-//   - Later we can load this data from a JSON file instead
 // ------------------------------------------------------------
-
-//new background image
-let bgImage;
-
-let playerSprite;
-
 let platforms = [
-  // { x, y, w, h }
-  { x: 0, y: 410, w: 800, h: 40 }, // ground (full width floor)
-  { x: 80, y: 310, w: 120, h: 16 }, // left low platform
-  { x: 280, y: 240, w: 140, h: 16 }, // centre platform
-  { x: 500, y: 170, w: 120, h: 16 }, // right high platform
-  { x: 160, y: 150, w: 100, h: 16 }, // left high platform
-  { x: 360, y: 320, w: 110, h: 16 }, // centre low platform
-  { x: 620, y: 290, w: 130, h: 16 }, // far right platform
+  // Ground floor
+  { x: 0, y: 410, w: 800, h: 40, type: "normal" },
+
+  // Re-positioned regular platforms
+  { x: 60, y: 320, w: 120, h: 16, type: "normal" },
+  { x: 240, y: 250, w: 140, h: 16, type: "normal" },
+  { x: 450, y: 310, w: 120, h: 16, type: "normal" },
+
+  // --- OUR SPECIAL ELEVATOR PLATFORM ---
+  // startY stores the resting position so it knows where to bounce around.
+  // timer keeps track of the wave animation.
+  {
+    x: 640,
+    y: 220,
+    startY: 220,
+    w: 110,
+    h: 16,
+    type: "elevator",
+    timer: 0,
+    isMoving: false,
+  },
 ];
 
 // ------------------------------------------------------------
-// PLAYER OBJECT — same structure as Example 1
-// w and h are added here for use in collision detection.
+// PLAYER OBJECT
 // ------------------------------------------------------------
 let player = {
   x: 100,
   y: 100,
-
-  vx: 0, // horizontal velocity
-  vy: 0, // vertical velocity
-
-  r: 20, // visual radius for blob drawing and collision
-
-  // Movement tuning — change these to adjust how the game feels
-  speed: 0.55, // horizontal acceleration per frame
-  maxSpeed: 4.5, // maximum horizontal speed
-  jumpForce: -12, // upward velocity applied when jumping (negative = upward)
-  friction: 0.78, // horizontal slowdown when no key is pressed (0–1, lower = more friction)
-
-  onGround: false, // tracks whether the player is standing on something
+  vx: 0,
+  vy: 0,
+  r: 20,
+  speed: 0.55,
+  maxSpeed: 4.5,
+  jumpForce: -12,
+  friction: 0.78,
+  onGround: false,
 };
 
-// ------------------------------------------------------------
-// PHYSICS CONSTANTS
-// Defined outside the player object so they can be shared
-// across multiple objects (e.g. enemies)
-// ------------------------------------------------------------
-const GRAVITY = 0.6; // downward force added to vy every frame
-
-// Blob animation time — increases each frame to animate the wobble
-let blobT = 0;
-
-// Platform colour stored as an array so it can be reused easily
-const PLATFORM_COLOR = [255, 160, 50]; // warm orange
+const GRAVITY = 0.6;
+const PLATFORM_COLOR = [255, 160, 50];
 
 // ============================================================
-// setup()
-// Runs once at the very start of the sketch.
-// Sets up the canvas and positions the player on the ground.
+// setup() & preload()
 // ============================================================
+function preload() {
+  // Ensure these paths match your local folder structure
+  bgImage = loadImage("assets/images/background.png");
+  playerSprite = loadImage("assets/images/character.png");
+  platformTexture = loadImage("assets/images/texture.jpg");
+}
+
 function setup() {
   createCanvas(800, 450);
-
-  // Place player on top of the ground platform (index 0 in the array)
+  // Place player on top of the ground platform
   player.y = platforms[0].y - player.r;
 }
 
 // ============================================================
-// draw()
-// Runs repeatedly in a loop after setup() finishes.
-// Each frame we clear the background, handle input,
-// apply physics, resolve collisions, and draw everything.
+// draw() loop
 // ============================================================
 function draw() {
+  // Draw Background Image
   image(bgImage, 0, 0, width, height);
 
   handleInput();
   applyPhysics();
+  updateMovingPlatforms(); // Updates elevator Y position
   resolvePlatformCollisions();
 
   drawPlatforms();
   drawPlayer();
   drawHUD();
-
-  blobT += 0.015; // advance blob wobble animation each frame
-}
-
-function preload() {
-  bgImage = loadImage("assets/background.png");
-  playerSprite = loadImage("assets/character.png");
 }
 
 // ------------------------------------------------------------
-// handleInput()
-// Checks which keys are held down this frame and updates
-// the player's velocity accordingly.
-// keyIsDown() returns true as long as the key is held —
-// unlike keyPressed(), which only fires once per press.
-// We check both arrow keys and WASD so either works.
+// MECHANICS & LOGIC
 // ------------------------------------------------------------
+
 function handleInput() {
-  // --- Horizontal movement ---
-  if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
-    // LEFT or A
-    player.vx -= player.speed;
-  }
-  if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) {
-    // RIGHT or D
-    player.vx += player.speed;
-  }
+  if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) player.vx -= player.speed;
+  if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) player.vx += player.speed;
 
-  // --- Clamp horizontal speed ---
-  // constrain(value, min, max) keeps a value within a range.
-  // Without this, holding a key forever would accelerate infinitely.
   player.vx = constrain(player.vx, -player.maxSpeed, player.maxSpeed);
 
-  // --- Apply friction when no horizontal key is pressed ---
-  // Multiplying by a value less than 1 gradually slows the player down.
   if (
     !keyIsDown(LEFT_ARROW) &&
     !keyIsDown(65) &&
@@ -136,36 +104,19 @@ function handleInput() {
     player.vx *= player.friction;
   }
 
-  // --- Jump ---
-  // The player can only jump when standing on the ground (onGround = true).
-  // This prevents jumping again mid-air.
   if ((keyIsDown(UP_ARROW) || keyIsDown(87)) && player.onGround) {
-    // UP or W
     player.vy = player.jumpForce;
     player.onGround = false;
   }
 }
 
-// ------------------------------------------------------------
-// applyPhysics()
-// Each frame we:
-//   1. Add gravity to vertical velocity (vy)
-//   2. Move the player by its velocity (vx, vy)
-//   3. Reset onGround so collision can set it again
-//   4. Handle falling off the bottom of the canvas
-// ------------------------------------------------------------
 function applyPhysics() {
-  // 1. Apply gravity — pulls the player down every frame
   player.vy += GRAVITY;
-
-  // 2. Move player by its current velocity
   player.x += player.vx;
   player.y += player.vy;
 
-  // 3. Keep player inside canvas horizontally
   player.x = constrain(player.x, player.r, width - player.r);
 
-  // 4. If player falls below the canvas, reset to start position
   if (player.y > height + 100) {
     player.x = 100;
     player.y = platforms[0].y - player.r;
@@ -173,100 +124,75 @@ function applyPhysics() {
     player.vy = 0;
   }
 
-  // Assume in the air until collision check says otherwise
   player.onGround = false;
 }
 
-// ------------------------------------------------------------
-// resolvePlatformCollisions()
-// Loops through every platform and checks if the player
-// is landing on top of it.
-//
-// The collision check asks three questions:
-//   1. Is the player horizontally overlapping the platform?
-//   2. Is the player falling downward (vy >= 0)?
-//   3. Is the player's bottom at or below the platform top?
-//
-// If all three are true, we snap the player to sit on top.
-// This top-only check means the player can jump through
-// platforms from below, which is a common platformer pattern.
-// ------------------------------------------------------------
-function resolvePlatformCollisions() {
-  for (let i = 0; i < platforms.length; i++) {
-    let p = platforms[i];
+function updateMovingPlatforms() {
+  for (let p of platforms) {
+    if (p.type === "elevator" && p.isMoving) {
+      p.timer += 0.05; // Speed of oscillation
+      // Smooth up/down movement using sine wave
+      p.y = p.startY + sin(p.timer) * 40;
+    }
+  }
+}
 
-    // Player's bounding box edges
+function resolvePlatformCollisions() {
+  for (let p of platforms) {
     let playerLeft = player.x - player.r;
     let playerRight = player.x + player.r;
     let playerBottom = player.y + player.r;
-
-    // Platform edges
     let platLeft = p.x;
     let platRight = p.x + p.w;
     let platTop = p.y;
 
-    // 1. Check horizontal overlap
     let overlapsHorizontally = playerRight > platLeft && playerLeft < platRight;
-
-    // 2 & 3. Check if landing on top (falling down onto the platform surface)
-    // The small tolerance (+ 20) prevents the player clipping through
-    // fast-moving platforms or getting stuck on edges.
     let landingOnTop =
       player.vy >= 0 && playerBottom >= platTop && playerBottom <= platTop + 20;
 
     if (overlapsHorizontally && landingOnTop) {
-      player.y = platTop - player.r; // snap to platform surface
-      player.vy = 0; // stop falling
-      player.onGround = true; // allow jumping again
+      player.y = platTop - player.r;
+      player.vy = 0;
+      player.onGround = true;
+
+      // ACTIVATE ELEVATOR: If the player lands on it, start the movement
+      if (p.type === "elevator") {
+        p.isMoving = true;
+      }
     }
   }
 }
 
 // ------------------------------------------------------------
-// drawPlatforms()
-// Loops through the platforms array and draws each one.
-// This is the same loop pattern used to draw any collection
-// of objects — enemies, coins, tiles, etc.
+// DRAWING FUNCTIONS
 // ------------------------------------------------------------
-function drawPlatforms() {
-  fill(PLATFORM_COLOR[0], PLATFORM_COLOR[1], PLATFORM_COLOR[2]);
-  noStroke();
 
-  for (let i = 0; i < platforms.length; i++) {
-    let p = platforms[i];
-    rect(p.x, p.y, p.w, p.h, 6); // rounded corners
+function drawPlatforms() {
+  for (let p of platforms) {
+    if (p.type === "elevator") {
+      // Draw the custom texture for elevators
+      image(platformTexture, p.x, p.y, p.w, p.h);
+    } else {
+      // Draw standard colored rectangles for normal platforms
+      fill(PLATFORM_COLOR[0], PLATFORM_COLOR[1], PLATFORM_COLOR[2]);
+      noStroke();
+      rect(p.x, p.y, p.w, p.h, 6);
+    }
   }
 }
 
-// ------------------------------------------------------------
-// drawPlayer()
-// The blob is drawn as a polygon using noise() to offset
-// each vertex slightly, creating an organic wobble effect.
-// push() and pop() save and restore drawing settings so
-// styles set here don't affect other drawing functions.
-// ------------------------------------------------------------
 function drawPlayer() {
-  push(); // save current drawing settings
-
-  // new imageMode(CENTER) the image draws perfectly around player.x and player.y
+  push();
   imageMode(CENTER);
-
-  // new drawing the sprite scaled to match the player's radius size
   image(playerSprite, player.x, player.y, player.r * 2, player.r * 2);
-
-  pop(); // restore drawing settings
+  pop();
 }
 
-// ------------------------------------------------------------
-// drawHUD()
-// HUD = Heads Up Display.
-// Shows controls on screen so the player always knows
-// how to interact without needing external instructions.
-// ------------------------------------------------------------
 function drawHUD() {
-  fill(180);
+  fill(255);
   noStroke();
   textSize(13);
   textAlign(LEFT);
-  text("Move: Arrow Keys or WASD   Jump: W or Up Arrow", 16, 24);
+  text("Move: Arrow Keys/WASD | Jump: W/Up", 16, 24);
+  text("Land on the far right platform to trigger the elevator!", 16, 45);
 }
