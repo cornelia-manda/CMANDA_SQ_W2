@@ -57,9 +57,9 @@ const PLATFORM_COLOR = [255, 160, 50];
 // ============================================================
 function preload() {
   // Ensure these paths match your local folder structure
-  bgImage = loadImage("images/background.png");
-  playerSprite = loadImage("images/character.png");
-  platformTexture = loadImage("images/texture.jpg");
+  bgImage = loadImage("assets/images/background.png");
+  playerSprite = loadImage("assets/images/character.png");
+  platformTexture = loadImage("assets/images/texture.jpg");
 }
 
 function setup() {
