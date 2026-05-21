@@ -21,3 +21,5 @@ References:
 [2] Lara. 2026. White and pink wood texture background. [JPEG image]. Adobe Stock. Retrieved May 18, 2026 from https://stock.adobe.com/images/white-and-pink-wood-texture-background/727393029
 
 [3] Terraria Community. 2026. CC - Creation Compendium #41 | Biomes & Nature - desert background. [PNG image]. Terraria Community Forums. Retrieved May 20, 2026 from https://forums.terraria.org/index.php?threads/creation-compendium-41.49905/
+
+[4] Cochrane, K. 2026. Week 2 Code Example #2. [Source code]. GBDA302: Global Digital Project 2. University of Waterloo.

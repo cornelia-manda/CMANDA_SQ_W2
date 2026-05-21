@@ -2,6 +2,7 @@
 // Platformer: Custom Textures & Elevator Mechanic
 // ============================================================
 
+// NOTE: // Citation [4]: This logic expands upon the Week 2 Example #2 provided by Dr. Cochrane.
 let bgImage;
 let playerSprite;
 let platformTexture;
