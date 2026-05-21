@@ -56,9 +56,13 @@ const PLATFORM_COLOR = [255, 160, 50];
 // setup() & preload()
 // ============================================================
 function preload() {
-  // Ensure these paths match your local folder structure
+  // Citation [3]: Desert biome background from Terraria Community Forums
   bgImage = loadImage("assets/images/background.png");
+
+  // Citation [1]: Pink Panther character art from Pinterest
   playerSprite = loadImage("assets/images/character.png");
+
+  // Citation [2]: Pink wood texture from Adobe Stock
   platformTexture = loadImage("assets/images/texture.jpg");
 }
 
